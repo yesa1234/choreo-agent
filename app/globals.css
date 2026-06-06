@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { background: #f6f3ee; color: #1a1a1a; }
+body { font-feature-settings: "ss01", "cv11"; }
+
+.workbench-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+.card {
+  @apply bg-white border border-line rounded-md p-5 shadow-sm;
+}
+
+.label {
+  @apply text-[11px] uppercase tracking-[0.18em] text-muted;
+}
+
+.field {
+  @apply w-full border border-line rounded-sm bg-white px-3 py-2 text-sm
+         focus:outline-none focus:border-accent;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 text-sm rounded-sm
+         border border-ink bg-ink text-paper hover:bg-accent hover:border-accent
+         disabled:opacity-40 disabled:cursor-not-allowed transition-colors;
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center px-4 py-2 text-sm rounded-sm
+         border border-line bg-transparent text-ink hover:border-ink transition-colors;
+}
+
+.tag {
+  @apply inline-block text-[11px] px-2 py-[2px] border border-line rounded-sm
+         text-muted mr-1 mb-1;
+}
