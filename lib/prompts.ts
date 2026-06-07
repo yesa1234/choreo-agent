@@ -66,6 +66,38 @@ export function conceptPrompt(intakeJson: string) {
 `.trim();
 }
 
+/** 根据用户反馈，覆盖式重生 3 个构思方向。 */
+export function refineConceptsPrompt(args: {
+  intakeJson: string;
+  previousConceptsJson: string;
+  perConceptIntentsJson: string; // [{id, intent: "keep"|"refine"|"redo", note?}]
+  feedbackText: string;
+}) {
+  return `
+当前阶段：根据用户反馈，重新生成 3 个构思方向（覆盖旧版）。
+
+原始素材：${args.intakeJson}
+上一轮 3 个构思：${args.previousConceptsJson}
+用户对每个构思的处理意图：${args.perConceptIntentsJson}
+  意图含义：
+  - "keep"   = 用户认可，新一轮请几乎原样保留（可微调措辞，但 title / thesis / choreographicQuestion 不要换）
+  - "refine" = 用户喜欢方向但需要按反馈调整（结合 note 与整体反馈修改）
+  - "redo"   = 用户不要这个，请换一个完全不同思路、不同 structureType 的方案
+用户的整体反馈（最重要）：${args.feedbackText}
+
+规则：
+- 必须输出恰好 3 个构思（id 仍为 k1/k2/k3，顺序与上一轮一致）。
+- 对 keep 的方案：保留原内容，只允许极小幅润色。
+- 对 refine 的方案：精确回应反馈中的具体不满（"太抒情" → 换冷的；"太难" → 给可执行版本；"和素材脱节" → 重新挂回素材）。
+- 对 redo 的方案：换一个与原方案 structureType / 空间逻辑 / 舞者关系都不同的新方向。
+- 三个方向之间继续保持差异度，不能三个都长得像。
+- 字段、风格、禁忌词约束与首轮 conceptPrompt 完全一致。
+
+输出严格 JSON：
+{ "concepts": [ { ... }, { ... }, { ... } ] }
+`.trim();
+}
+
 /* ──────────────── Stage 3 macro ──────────────── */
 
 export function macroStructurePrompt(intakeJson: string, conceptJson: string) {

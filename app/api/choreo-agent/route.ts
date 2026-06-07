@@ -3,6 +3,7 @@ import { callLLM, detectProvider } from "@/lib/llm";
 import {
   SYSTEM_PROMPT,
   conceptPrompt,
+  refineConceptsPrompt,
   macroStructurePrompt,
   sectionRehearsalCardPrompt,
   directorFeedbackPrompt,
@@ -26,8 +27,16 @@ import { getSectionTrail } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+type ConceptIntent = { id: string; intent: "keep" | "refine" | "redo"; note?: string };
+
 type Action =
   | { action: "generate_concepts"; project: ChoreoProject }
+  | {
+      action: "refine_concepts";
+      project: ChoreoProject;
+      feedbackText: string;
+      intents: ConceptIntent[];
+    }
   | { action: "build_macro"; project: ChoreoProject; conceptId: string }
   | { action: "generate_section_card"; project: ChoreoProject; sectionId: string; revision: 0 | 1 }
   | {
@@ -65,6 +74,29 @@ export async function POST(req: NextRequest) {
       /* ─────────── concept ─────────── */
       case "generate_concepts": {
         const user = conceptPrompt(JSON.stringify(body.project.intake));
+        const raw = await callLLM({ system: SYSTEM_PROMPT, user });
+        const parsed = safeJSON(raw);
+        if (!assertConcepts(parsed)) {
+          return NextResponse.json({ error: "invalid_concepts", raw }, { status: 502 });
+        }
+        return NextResponse.json({ provider, ...parsed });
+      }
+
+      /* ─────────── refine concepts ─────────── */
+      case "refine_concepts": {
+        const prev = body.project.choreographicConcepts;
+        if (!prev || prev.length === 0) {
+          return NextResponse.json({ error: "no_previous_concepts" }, { status: 400 });
+        }
+        if (!body.feedbackText?.trim() && !body.intents?.some((i) => i.intent !== "keep")) {
+          return NextResponse.json({ error: "no_feedback_or_intent" }, { status: 400 });
+        }
+        const user = refineConceptsPrompt({
+          intakeJson: JSON.stringify(body.project.intake),
+          previousConceptsJson: JSON.stringify(prev),
+          perConceptIntentsJson: JSON.stringify(body.intents ?? []),
+          feedbackText: body.feedbackText ?? "",
+        });
         const raw = await callLLM({ system: SYSTEM_PROMPT, user });
         const parsed = safeJSON(raw);
         if (!assertConcepts(parsed)) {
